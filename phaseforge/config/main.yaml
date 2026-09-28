@@ -1,0 +1,36 @@
+# config/main.yaml — Root Hydra config (compose root)
+
+defaults:
+  - data: common
+  - optional dynamics@_global_: null
+  - optional topo@_global_: null
+  - models: precision_residual_phaseforge
+  - train: stage1
+  - eval: metrics
+  - _self_
+
+project:
+  name: "PhaseForge"
+  seed: 42
+  device: "cuda"
+  output_dir: "outputs"
+  tag: null               # Optional user-friendly label (e.g., "lr1e-3", "ablation")
+  method: null            # Optional protocol method name (set by the runner)
+  # Log verbosity for CLI runs. WARNING keeps cloud consoles readable:
+  # per-epoch routing diagnostics, checkpoint chatter, and third-party INFO
+  # lines (e.g. numexpr) are filtered out. Use INFO or DEBUG for verbose
+  # local runs, e.g. `phaseforge-train project.log_level=INFO`.
+  log_level: "WARNING"
+  wandb:
+    project: "phaseforge"
+    entity: null          # Set via env var WANDB_ENTITY or override
+    mode: "disabled"      # online | offline | disabled
+
+# The CLI already writes its own per-run artifacts (resolved_config.yaml,
+# run_meta.json) under outputs/<model>/stage<N>/...; keep Hydra from
+# duplicating them into a parallel outputs/YYYY-MM-DD/HH-MM-SS/ job dir.
+hydra:
+  output_subdir: null      # no .hydra/ config copy — resolved_config.yaml covers it
+  job_logging:
+    root:
+      handlers: [console]  # no cli.log file — console stream only

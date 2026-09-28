@@ -1,0 +1,28 @@
+# This CITATION.cff file is pending the paper's publication metadata.
+# Fields marked TODO must be filled by the author before release.
+# See docs/citation.md.
+cff-version: 1.2.0
+title: "Separating Routing Organization from Task Success: Matched Evidence from Prototype-Routed MoE Policies"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: ""
+    given-names: ""
+repository-code: "https://github.com/neryva-lab/phaseforge"
+license: MIT
+version: 0.1.0
+date-released: "2026-09-29"
+# Uncomment and fill once the paper is published:
+# preferred-citation:
+#   type: article
+#   title: "TODO: paper title"
+#   authors:
+#     - family-names: "TODO: family name"
+#       given-names: "TODO: given name"
+#   journal: "TODO: venue"
+#   year: "TODO: YYYY"
+keywords:
+  - robotic manipulation
+  - mixture-of-experts
+  - imitation learning
+  - phase-bootstrapped routing

@@ -1,0 +1,171 @@
+{
+  "name": "router_initialization_ablation_lift",
+  "task": "Lift",
+  "description": "Focused router-initialization ablation for Lift. All Stage 2 conditions use the same phase-aware Stage 1 representation, beta-zero direct-action experts, hard top-1 routing unless explicitly marked softmax, and identical phase labels/loss settings.",
+  "seeds": [42, 43, 44],
+  "defaults": [
+    "train.early_stopping.enabled=false"
+  ],
+  "methods": [
+    {
+      "index": 1,
+      "name": "precision_residual_phaseforge",
+      "role": "shared phase-aware Stage 1 provider",
+      "model": "precision_residual_phaseforge",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [1],
+      "stage2_source": null,
+      "evaluate": false,
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=false",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false"
+      ]
+    },
+    {
+      "index": 2,
+      "name": "bc",
+      "role": "shared BC Stage 1 provider",
+      "model": "final_aligned_bc",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [1],
+      "stage2_source": null,
+      "evaluate": false,
+      "overrides": [
+        "train.lambda_phase=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase",
+        "train.phase_label_field=phase"
+      ]
+    },
+    {
+      "index": 3,
+      "name": "router_init_random",
+      "role": "primary initialization arm: random prototypes",
+      "model": "precision_residual_phase_random_router",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [2],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "models.router_init.type=random",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=false",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 4,
+      "name": "router_init_phase",
+      "role": "primary initialization arm: phase centroids",
+      "model": "precision_residual_phaseforge",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [2],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "models.router_init.type=centroid",
+        "models.router_init.prototype_source=phase",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=false",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 5,
+      "name": "router_init_topology",
+      "role": "primary initialization arm and reference: topology centroids",
+      "model": "precision_residual_phaseforge",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [2],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "models.router_init.type=centroid",
+        "models.router_init.prototype_source=topo",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=false",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 6,
+      "name": "representation_bc",
+      "role": "secondary representation arm: BC encoder with topology routing",
+      "model": "precision_residual_plain_encoder",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [2],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=false",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 7,
+      "name": "routing_softmax_top1",
+      "role": "secondary routing arm: softmax top-1 router",
+      "model": "final_aligned_softmax_top1",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [2],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "models.router_init.type=centroid",
+        "models.router_init.prototype_source=topo",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=false",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    }
+  ]
+}

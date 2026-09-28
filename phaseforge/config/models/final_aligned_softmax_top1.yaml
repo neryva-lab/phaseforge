@@ -1,0 +1,79 @@
+# config/models/final_aligned_softmax_top1.yaml — Final router-package comparison (MODEL-06).
+#
+# Same final family as precision_residual_phaseforge EXCEPT the routing
+# mechanism: a learned softmax-scored top-1 TopKRouter instead of the
+# hard prototype router. Pre-registered settings below (top_k=1,
+# noise_std=0.1 training-only, normalize_input=true, balance_coeff=0.01).
+# The balance-coefficient asymmetry (0.01 here vs 0.0001 for the prototype
+# router) is deliberate and registered: this row is a ROUTER-PACKAGE
+# comparison, NOT a pure gate-only ablation. Do not tune balance_coeff
+# after observing utilization. Router init installs topology centroids
+# into the gate weights (same init as the family) so only the gate
+# mechanism differs; the margin loss consumes deterministic
+# pre-exploration logits.
+
+name: "final_aligned_softmax_top1"
+_target_: phaseforge.models.phase_moe.PhaseBootstrappedMoE
+
+encoder:
+  _target_: phaseforge.models.components.encoder.StateEncoder
+  input_dim: ${data.state_dim}
+  hidden_dims: [256, 256, 256]
+  latent_dim: 128
+  activation: "gelu"
+  dropout: 0.1
+  use_residual: true
+  normalize_output: true
+
+action_head:
+  _target_: phaseforge.models.components.action_head.ActionHead
+  input_dim: 128
+  output_dim: ${data.action_dim}
+  head_type: "deterministic"
+  hidden_dim: 256
+
+phase_head:
+  _target_: phaseforge.models.components.phase_head.PhaseClassificationHead
+  latent_dim: 128
+  num_phases: 6
+
+router:
+  _target_: phaseforge.models.components.router.TopKRouter
+  latent_dim: 128
+  num_experts: 6
+  top_k: 1
+  noise_std: 0.1
+  normalize_input: true
+  balance_coeff: 0.01
+
+expert:
+  _target_: phaseforge.models.components.impedance_expert.ResidualImpedanceExpert
+  input_dim: 128
+  hidden_dims: [256]
+  output_dim: ${data.action_dim}
+  action_scale: [0.05, 0.05, 0.05, 0.5, 0.5, 0.5, 0.04]
+  kappa_min: 0.1
+  kappa_max: 5.0
+  beta: 0.0
+
+freeze_encoder: false
+encoder_lr_scale: 0.1
+
+soft_mapping:
+  enabled: false
+
+teacher_routing:
+  enabled: false
+
+router_init:
+  type: "centroid"
+  prototype_source: "topo"
+  mapping_mode: "prototype_softmax"
+  temperature: 1.0
+  seed: ${project.seed}
+
+expert_init:
+  type: "partial_warm"
+  drop_rate: 0.5
+  seed: ${project.seed}
+  jitter_std: 0.0

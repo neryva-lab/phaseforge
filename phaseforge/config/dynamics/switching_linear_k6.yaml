@@ -1,0 +1,37 @@
+# phaseforge/config/dynamics/switching_linear_k6.yaml — PhaseForge 2.0 primary dynamic discovery.
+# Sticky Switching Linear Dynamical System (SLDS) with 6 regimes, matched to the
+# canonical 6-expert router. Fit train-only, decode validation with frozen model.
+# Tuned for real Franka data (Lift/Can/Square: state_dim 19-59, ~9k-30k steps):
+# kappa 20 (was 50) reduces single-regime collapse on Lift/Can, ridge 1e-4 and
+# min_variance 1e-4 keep the 6*19*19 dynamics identifiable. 40 EM iters with
+# 1e-3 tol converges on 19-dim Lift in ~5s, 59-dim Transport in ~25s (CPU).
+# When selected via `dynamics@_global_=switching_linear_k6`, Hydra merges this
+# into `cfg.data.dynamics` so CacheManager.compute_hash invalidates correctly.
+# @package _global_
+data:
+  dynamics:
+    enabled: true
+    num_regimes: 6
+    sticky_kappa: 20.0
+    dirichlet_alpha: 1.0
+    ridge_lambda: 0.0001
+    min_variance: 0.0001
+    max_em_iter: 40
+    em_tol: 0.001
+    min_duration: 3
+    # Align discovery randomness with the protocol seed.  A literal 42 here
+    # would make every runner seed reuse the same fitted dynamic regimes.
+    seed: ${project.seed}
+    train_label_field: "phase_dynamic"
+    # Quality gates (Section 4.2) — pilot-tuned: 2% is strict for 6 regimes on
+    # ~1k-step Lift (20 steps); 0.5% (≈5 steps) catches true collapse while
+    # allowing naturally rare contact regimes. All gates fail closed.
+    min_occupancy_threshold: 0.005
+    max_single_regime_fraction: 0.5
+    max_switch_rate: 0.6
+    min_nll_improvement: 0.0
+    max_within_rule_residual_ratio: 1.0
+    # Keep the default fail-closed. Exploratory manifests may explicitly set
+    # this false to train/evaluate a degraded discovery while retaining the
+    # failed quality report in the persisted artifact.
+    enforce_quality_gates: true

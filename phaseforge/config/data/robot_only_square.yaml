@@ -1,0 +1,21 @@
+# Robot-only negative control for NutAssemblySquare.
+defaults:
+  - square
+  - _self_
+
+state_keys:
+  - key: "robot0_joint_pos"
+    dim: 7
+  - key: "robot0_joint_vel"
+    dim: 7
+  - key: "robot0_eef_pos"
+    dim: 3
+  - key: "robot0_eef_quat"
+    dim: 4
+  - key: "robot0_gripper_qpos"
+    dim: 2
+state_dim: 23
+schema_version: "robomimic-square-robot-only-v1"
+phase_labeler:
+  eef_pos_slice: [14, 17]
+  gripper_qpos_slice: [21, 23]

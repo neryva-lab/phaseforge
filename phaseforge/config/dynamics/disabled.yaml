@@ -1,0 +1,20 @@
+# phaseforge/config/dynamics/disabled.yaml — PhaseForge 1.0 canonical (no dynamic discovery).
+# When selected via `dynamics@_global_=disabled`, Hydra merges this into
+# `cfg.data.dynamics`
+# so the data cache identity (CacheManager.compute_hash) automatically includes
+# the discovery setting. Legacy 1.0 configs without `data.dynamics` are treated
+# as disabled for backward compatibility.
+# @package _global_
+data:
+  dynamics:
+    enabled: false
+    num_regimes: 6
+    sticky_kappa: 50.0
+    dirichlet_alpha: 1.0
+    ridge_lambda: 0.0001
+    min_variance: 0.0001
+    max_em_iter: 40
+    em_tol: 0.001
+    min_duration: 3
+    seed: 42
+    train_label_field: "phase"

@@ -1,0 +1,13 @@
+{
+  "name": "router_initialization_ablation_can_square",
+  "task": "all",
+  "description": "Focused ablation of topology/phase-informed hard prototype routing for memoryless direct-action MoE policies on Can and Square.",
+  "seeds": [42, 43, 44],
+  "defaults": [
+    "train.early_stopping.enabled=false"
+  ],
+  "manifests": [
+    "router_initialization_ablation_can.json",
+    "router_initialization_ablation_square.json"
+  ]
+}

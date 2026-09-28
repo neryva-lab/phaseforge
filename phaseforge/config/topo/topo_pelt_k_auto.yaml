@@ -1,0 +1,22 @@
+# phaseforge/config/topo/topo_pelt_k_auto.yaml — Phase 2 K-sweep starting point.
+# Same PELT front end as topo_pelt_k6. The evidence sweep over K is driven
+# by explicit overrides (e.g. `data.topo.num_regimes=4`), one value per
+# run; the surviving K is then pinned in a topo_pelt_k6-style file for the
+# confirmation runs. There is no in-pipeline K loop by design: each K gets
+# its own cache hash, audit report, and artifact.
+# Select via `topo=topo_pelt_k_auto`.
+# @package _global_
+data:
+  topo:
+    enabled: true
+    method: "pelt"
+    num_regimes: 6
+    penalty_beta: 10.0
+    min_segment_len: 5
+    cost: "l2"
+    clustering: "kmeans"
+    seed: ${project.seed}
+    train_label_field: "phase_topo"
+    enforce_observability: true
+    audit_min_macro_f1: 0.6
+    audit_min_occupancy: 0.01

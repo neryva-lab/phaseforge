@@ -1,0 +1,70 @@
+# config/models/precision_residual_scratch_moe.yaml — Final expert-init control (MODEL-04).
+#
+# Same final family as precision_residual_phaseforge EXCEPT expert
+# initialization: independent random draws instead of the 50% partial
+# warm-start (no silent warm-start from any checkpoint). Router init,
+# representation, beta-zero contract, and Stage 2 optimization match the
+# proposed method exactly, so the comparison isolates partial expert
+# warm-start.
+
+name: "precision_residual_scratch_moe"
+_target_: phaseforge.models.phase_moe.PhaseBootstrappedMoE
+
+encoder:
+  _target_: phaseforge.models.components.encoder.StateEncoder
+  input_dim: ${data.state_dim}
+  hidden_dims: [256, 256, 256]
+  latent_dim: 128
+  activation: "gelu"
+  dropout: 0.1
+  use_residual: true
+  normalize_output: true
+
+action_head:
+  _target_: phaseforge.models.components.action_head.ActionHead
+  input_dim: 128
+  output_dim: ${data.action_dim}
+  head_type: "deterministic"
+  hidden_dim: 256
+
+phase_head:
+  _target_: phaseforge.models.components.phase_head.PhaseClassificationHead
+  latent_dim: 128
+  num_phases: 6
+
+router:
+  _target_: phaseforge.models.components.prototype_router.PrototypeRouter
+  latent_dim: 128
+  num_experts: 6
+  top_k: 1
+  margin: 0.5
+  balance_coeff: 0.0001
+
+expert:
+  _target_: phaseforge.models.components.impedance_expert.ResidualImpedanceExpert
+  input_dim: 128
+  hidden_dims: [256]
+  output_dim: ${data.action_dim}
+  action_scale: [0.05, 0.05, 0.05, 0.5, 0.5, 0.5, 0.04]
+  kappa_min: 0.1
+  kappa_max: 5.0
+  beta: 0.0
+
+freeze_encoder: false
+encoder_lr_scale: 0.1
+
+soft_mapping:
+  enabled: false
+
+teacher_routing:
+  enabled: false
+
+router_init:
+  type: "centroid"
+  prototype_source: "topo"
+  mapping_mode: "prototype_softmax"
+  temperature: 1.0
+  seed: ${project.seed}
+
+expert_init:
+  type: "random"

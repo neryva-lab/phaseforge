@@ -1,0 +1,91 @@
+# config/eval/metrics.yaml — Evaluation metric configuration
+#
+# Default eval config (offline metrics on validation data).
+#
+# Trajectory-based temporal metrics: routing_entropy_variance,
+# time_to_stable_routing and boundary_action_smoothness are temporal and
+# therefore ONLY valid within a single trajectory. The offline evaluator
+# regroups batches by the collator's trajectory_id/trajectory_position
+# keys and computes them per trajectory, then averages. If the dataloader
+# does not provide those keys the metrics are SKIPPED with a warning and
+# recorded under eval/skipped_metrics — they are never computed across
+# episode boundaries.
+
+mode: "offline"
+
+mechanism:
+  routing_entropy:
+    enabled: true
+    log_every_n_steps: 10
+    # Note: entropy of the PRE-TOP-K softmax gate probabilities over all
+    # experts (see eval/metric_definitions in the results payload).
+
+  routing_entropy_variance:
+    enabled: true
+    window_size: 10
+    # Temporal metric — computed per trajectory. A window_size that
+    # exceeds the trajectory length falls back to the full-trajectory
+    # variance (documented behavior). This value is frozen for the final
+    # protocol; do not tune it after inspecting test results.
+
+  time_to_stable_routing:
+    enabled: true
+    window_size: 10
+    variance_threshold: 0.001
+    consecutive_windows: 3
+    # Temporal metric — computed per trajectory. The window is kept
+    # below the shortest Lift pilot trajectory so the metric is observable;
+    # trajectories that never stabilize are reported via
+    # eval/routing_stability_fraction, not as a fake time at the horizon.
+    # window_size/consecutive_windows are frozen before the final sweep.
+
+  expert_utilization:
+    enabled: true
+    log_every_n_steps: 50
+    # Counts ALL top-k routing assignments (top-k vs top-1 distinction is
+    # declared in eval/metric_definitions).
+
+  collapse_rate:
+    enabled: true
+    threshold_factor: 5.0     # Expert is collapsed if usage < 1/(factor * E)
+
+  phase_expert_nmi:
+    enabled: true
+    log_every_n_steps: 50
+    # Uses only the TOP-1 routing assignment (declared in
+    # eval/metric_definitions).
+
+task:
+  action_l2_threshold_rate:
+    enabled: false
+    l2_threshold: 0.05        # Offline action-agreement diagnostic only
+    # This is intentionally disabled by default: it is not rollout success.
+
+  completion_rate:
+    # Disabled: the offline evaluator processes a flattened step stream and
+    # cannot group steps into trajectories (sequence_length=1), so a
+    # trajectory-level completion rate would be ill-defined. Enable only
+    # when trajectory boundaries are available in the batch.
+    enabled: false
+
+  boundary_action_smoothness:
+    enabled: true
+    boundary_window: 3        # Timesteps around boundary
+    # Temporal metric — computed per trajectory. Measures the L2
+    # temporal change of PREDICTED actions near phase transitions, NOT an
+    # error against target actions (named accordingly; a target-based
+    # boundary error requires trajectory-aligned targets).
+
+  phase_boundary_error:
+    enabled: false            # Diagnostic (phase-head error by distance to
+                              # transition); off for the frozen protocol.
+    bucket_edges: [1, 3, 6, 11]
+    # Temporal diagnostic — computed per trajectory. Distinguishes
+    # boundary label noise (errors cluster at transitions) from uniform
+    # auxiliary overfitting. Requires per-step (N, C) phase logits (single-
+    # step stage-1 models); multi-step sequences are skipped with a warning.
+
+  sample_efficiency:
+    enabled: false            # Expensive; enable only for dedicated ablation runs
+    fractions: [0.25, 0.50, 0.75, 1.00]
+

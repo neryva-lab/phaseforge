@@ -1,0 +1,62 @@
+# config/models/precision_residual_teacher_forced.yaml — Final privileged-training diagnostic (MODEL-08).
+#
+# Normalized final encoder with the topology-labeled Stage 1 checkpoint,
+# beta-zero residual experts under the declared 50% partial warm-start, and
+# phase_topo partitions during Stage 2 training. Evaluation routes by the
+# PREDICTED phase-head class (label-free), so this is a separate
+# privileged-training diagnostic — never pooled with deployable rollout
+# results. Metadata marks it as such.
+
+name: "precision_residual_teacher_forced"
+_target_: phaseforge.models.baselines.precision_residual_teacher_forced.PrecisionResidualTeacherForcedModel
+
+encoder:
+  _target_: phaseforge.models.components.encoder.StateEncoder
+  input_dim: ${data.state_dim}
+  hidden_dims: [256, 256, 256]
+  latent_dim: 128
+  activation: "gelu"
+  dropout: 0.1
+  use_residual: true
+  normalize_output: true
+
+action_head:
+  _target_: phaseforge.models.components.action_head.ActionHead
+  input_dim: 128
+  output_dim: ${data.action_dim}
+  head_type: "deterministic"
+  hidden_dim: 256
+
+phase_head:
+  _target_: phaseforge.models.components.phase_head.PhaseClassificationHead
+  latent_dim: 128
+  num_phases: 6
+
+router:
+  _target_: phaseforge.models.components.router.TopKRouter
+  latent_dim: 128
+  num_experts: 6
+  top_k: 1
+  noise_std: 0.0
+  balance_coeff: 0.01
+
+expert:
+  _target_: phaseforge.models.components.impedance_expert.ResidualImpedanceExpert
+  input_dim: 128
+  hidden_dims: [256]
+  output_dim: ${data.action_dim}
+  action_scale: [0.05, 0.05, 0.05, 0.5, 0.5, 0.5, 0.04]
+  kappa_min: 0.1
+  kappa_max: 5.0
+  beta: 0.0
+
+freeze_encoder: true
+encoder_lr_scale: 0.1
+
+label_field: "phase_topo"
+
+expert_init:
+  type: "partial_warm"
+  drop_rate: 0.5
+  jitter_std: 0.0
+  seed: ${project.seed}

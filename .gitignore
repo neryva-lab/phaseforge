@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.ruff_cache
+.uv-cache-eval-review
+.coverage
+htmlcov/
+
+# Environments
+.env
+.venv/
+.venv-rollout/
+.venv-toolhang/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ML / Data
+*.h5
+*.hdf5
+*.pth
+*.pt
+*.ckpt
+*.onnx
+wandb/
+runs/
+lightning_logs/
+data/raw/
+data/processed/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+outputs/
+logs/
+_simulation
+.mypy_cache
+final_experiments_results
+legacy
+# docs/notes

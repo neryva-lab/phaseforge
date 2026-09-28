@@ -1,0 +1,142 @@
+# config/train/stage2.yaml — Stage 2: Bootstrapped MoE specialization
+
+stage: 2
+epochs: 200
+grad_clip_norm: 1.0
+lambda_phase: 0.0         # Phase loss not used in Stage 2
+# Resolved label field for Stage 2 phase diagnostics (routing accuracy,
+# phase-weighted action loss, release-loss gating, dimension logging).
+# Topology rows resolve to "phase_topo"; the Static Rule comparison resolves
+# to "phase". Default "phase" preserves historical behavior; the final
+# manifest overrides this explicitly per method.
+phase_label_field: "phase"
+# Present so manifest-level overrides of the stage-1 λ schedule compose for
+# every cell. Stage-2 training never reads it (Stage2Trainer has its own
+# _compute_loss) — the value is inert here and always "constant".
+lambda_schedule:
+  type: "constant"
+  start: 1.0
+  end: 0.0
+# Present so manifest-level overrides of the stage-1 SupCon block compose for
+# every cell. Stage-2 training never reads it (Stage2Trainer has its own
+# _compute_loss) — the value is inert here and always disabled.
+supcon:
+  enabled: false
+  lambda_sc: 1.0
+  temperature: 0.07
+  label_field: "phase"
+log_every_n_steps: 50
+rich_progressbar: false
+epoch_progressbar: true
+
+# Path to the Stage 1 best checkpoint.
+# If not set (null), the latest checkpoint is auto-detected from
+# outputs/<model_name>/stage1/ for the same model config.
+stage1_ckpt_path: null
+
+freeze_encoder: true      # Freeze encoder loaded from Stage 1 (ablation: false)
+
+# Optional resume: path to a checkpoint saved by CheckpointCallback. Restores
+# model/optimizer/scheduler/RNG/callback state and continues from the recorded
+# epoch (null = fresh run).
+resume_from: null
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 1.0e-4              # Lower LR for fine-tuning
+  weight_decay: 1.0e-4
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 200              # Matches epochs
+  eta_min: 1.0e-7
+
+checkpoint:
+  every_n_epochs: 20
+  monitor: "val/loss_action"
+  mode: "min"
+  save_top_k: 1
+  min_epoch: 0             # Skip best-checkpoint selection before this epoch;
+                           # prevents transient early noise dips from permanently
+                           # locking checkpoint_best.pt (see §4.4 stabilization).
+
+early_stopping:
+  enabled: false          # Locked protocol: full-length 200-epoch runs;
+                          # ad-hoc runs must opt IN via train.early_stopping.enabled=true
+  monitor: "val/loss_action"
+  mode: "min"
+  patience: 10
+  min_delta: 0.001
+
+# Balance-loss weight lives on the router (models.router.balance_coeff);
+# there is deliberately no train.balance_coeff here (dead config, removed).
+
+# Stickiness loss weight: scales -log p_t[top1_{t-1}] emitted by the
+# router when models.router.use_history=true. 0.0 keeps the loss
+# bit-identical to the protocol (inert for routers without history).
+sticky_coeff: 0.0
+
+# Large-margin prototype routing. Disabled by
+# default: `enabled=false` contributes exactly 0.0 with no extra metrics,
+# preserving the frozen protocol bit-for-bit. Enable with
+# `train.margin.enabled=true` alongside a PrototypeRouter model
+# (`models=precision_residual_phaseforge`); any other
+# router fails closed. Pairs with the lipschitz/gain_reg blocks below for
+# the full multi-term Stage 2 objective.
+margin:
+  enabled: false
+  lambda_margin: 1.0
+  margin: 0.5
+  # Resolved label field for the Stage 2 margin-routing loss.
+  # Topology rows resolve to "phase_topo"; the Static Rule comparison
+  # resolves to "phase". Default "phase" preserves historical behavior.
+  label_field: "phase"
+
+# Local contraction regularization. Disabled by default
+# (exactly 0.0, no extra metrics when off). Enabled only with impedance
+# experts; `rho` must satisfy 0 <= rho < 1 (spec e.g. 0.7/0.8).
+lipschitz:
+  enabled: false
+  lambda_lip: 0.1
+  rho: 0.8
+  num_pairs: 256
+  coord_slice: [0, 3]
+
+# Gain regularization: E||kappa - kappa_nominal||^2 against
+# pathological stiffness. Disabled by default; impedance experts only.
+gain_reg:
+  enabled: false
+  lambda_gain: 1.0e-4
+  kappa_nominal: 1.0
+
+# Teacher-KL routing knobs. The single source of truth for whether the
+# teacher path is active is models.teacher_routing.enabled (the model emits
+# phase_logits in Stage 2 only when it is true); this block only tunes the
+# loss. lambda0 weights KL(M^T softmax(phase_logits) || router) for the
+# first half of training and anneals linearly to 0 over the second half.
+teacher_routing:
+  lambda0: 0.5
+
+# Routing metric logging
+routing_log_every_n_steps: 10
+routing_heatmap_every_n_epochs: 10
+
+# Optional dimension weighting for MSE loss (e.g. [1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 2.0])
+dim_weights: null
+
+# Optional phase weighting for MSE loss (e.g. [1.0, 1.0, 1.0, 1.0, 2.0])
+phase_weights: null
+
+# Release Kinematics Auxiliary Loss (Intervention C).
+# Penalizes lateral arm command velocity (x, y) when the gripper opens during Place.
+release_loss:
+  enabled: false
+  lambda_rel: 0.1
+  gripper_threshold: 0.0
+  place_phase: 4
+
+# Fine-grained dimension-wise and place-phase MSE logging in validation
+log_dimension_mse: false
+

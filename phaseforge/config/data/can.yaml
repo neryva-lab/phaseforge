@@ -1,0 +1,94 @@
+# Per-task data config for the Can benchmark task.
+# Single-task pilot schema: privileged structured low-dimensional state.
+# It is intentionally not RGB and not bare robot proprioception.
+
+batch_size: 256
+num_workers: 2
+pin_memory: true
+persistent_workers: true
+prefetch_factor: 2
+
+# The current model/trainer path is single-step. History support is a required
+# follow-up before making a history-dependent claim.
+sequence_length: 1
+stride: 1
+
+normalization_strategy: "zscore"
+
+# Single-arm Panda OSC_POSE state layout. Can's object observation is 14-D
+# (relative pose 7 + absolute pose 7), unlike Lift's 10-D object observation.
+state_keys:
+  - key: "robot0_eef_pos"
+    dim: 3
+  - key: "robot0_eef_quat"
+    dim: 4
+  - key: "robot0_gripper_qpos"
+    dim: 2
+  - key: "object"
+    dim: 14
+
+action_key: "actions"
+action_dim: 7
+state_dim: 23
+schema_version: "robomimic-can-structured-v2"
+action_contract:
+  representation: "robosuite_environment_action"
+  range: [-1.0, 1.0]
+  gripper_convention: "robosuite_action_convention"
+  requires_env_metadata: true
+
+source:
+  name: "robomimic"
+  task_name: "Can"
+  dataset_type: "ph"
+  hdf5_type: "low_dim"
+  expected_env_name: "PickPlaceCan"
+  # The Can PH low-dim HDF5 was collected with robosuite 1.5.1.
+  robosuite_requirement: "==1.5.1"
+  dir: "${oc.env:PHASEFORGE_DATA_DIR,data}/raw/robomimic/can"
+  manifest_path: null
+  auto_download: false
+  huggingface:
+    repo_id: "amandlek/robomimic"
+    path: "v1.5/can/ph/low_dim_v15.hdf5"
+    sha256: null
+
+phase_labeler:
+  _target_: phaseforge.data.robomimic.phase_labeler.RuleBasedPhaseLabeler
+  num_phases: 6
+  gripper_closed_threshold: 0.02
+  gripper_open_threshold: 0.04
+  eef_velocity_threshold: 0.01
+  min_phase_duration: 5
+  median_filter_size: 7
+  eef_pos_slice: [0, 3]
+  gripper_qpos_slice: [7, 9]
+
+ingester:
+  _target_: phaseforge.data.robomimic.ingester.RobomimicHDF5Ingester
+  state_keys: ${data.state_keys}
+  action_key: ${data.action_key}
+  action_dim: ${data.action_dim}
+  action_range: ${data.action_contract.range}
+  expected_env_name: ${data.source.expected_env_name}
+  respect_dataset_filters: ${data.split.use_dataset_filters}
+  phase_labeler: ${data.phase_labeler}
+
+# One policy per task is the primary protocol. Within-task trajectory splits
+# keep validation available for the single-task pilot without task leakage.
+split:
+  strategy: "trajectory"
+  use_dataset_filters: true
+  val_ratio: 0.1
+  seed: 42
+
+# Cache reuse is fail-closed: a different schema/source/split may not be used.
+enforce_strict_cache: true
+
+# Corruption ablation overrides (default: no corruption).
+phase_corruption_rate: 0.0
+phase_shuffle_control: false
+
+# Cache root (resolved under the shared data root by the cache manager).
+cache_root: "cache"
+

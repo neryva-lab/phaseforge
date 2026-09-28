@@ -1,0 +1,83 @@
+# config/eval/rollout.yaml — State-only rollout evaluation (plan §4.1/§4.4)
+#
+# Select with `eval=rollout`. This is the protocol's evaluation mode: the
+# model is rolled out in the simulator from the frozen reset bank with the
+# strict metric (infrastructure failures invalidate the run; policy failures
+# are valid failed episodes, labeled separately).
+#
+# This config is task-agnostic. The dataset's pinned env_args
+# (resolved through the cache as ``env_metadata``) is the authoritative
+# source for ``env_name`` and ``env_version``. Per-task data configs in
+# ``phaseforge/config/data/`` (``lift``, ``can``, ``square``, ``tool_hang``,
+# ``transport``) drive the ingestion path for each of the five benchmark
+# tasks; the rollout layer picks them up via ``data.source.task_name``.
+
+mode: "rollout"
+
+env:
+  # The dataset's env_args (persisted in the cache as env_metadata) is the
+  # authoritative pin. An explicit ``expected_env_name`` here overrides
+  # the cache-derived value; leave null for the default task-relative
+  # behavior (recommended).
+  expected_env_name: null
+  # Compatibility fallback for legacy configs. Per-task data.source pins are
+  # authoritative when present; the gate also compares the installed version
+  # against the dataset's recorded env_version.
+  robosuite_requirement: "==1.5.1"
+  mujoco_requirement: ">=3.2.7"
+
+bank:
+  # Frozen reset bank: {num_cases} cases seeded from a fresh simulator,
+  # content-hash-identified, SHA-256-verified on every load. The bank ID
+  # includes the reset-protocol revision; banks generated under an older
+  # simulator-construction/reset protocol are rejected and never reused.
+  # Regeneration creates a new frozen artifact; existing banks are never
+  # silently overwritten.
+  num_cases: 50
+  seed: 2026
+  auto_generate: true
+  max_attempts_per_case: 40
+
+episodes:
+  # null -> the horizon recorded in the dataset's env_kwargs
+  # (Lift/Can/Square/ToolHang: 500; Transport: 700).
+  horizon: null
+  # Tolerance on the declared [-1, 1] action contract before a policy
+  # action counts as policy_invalid_action.
+  action_tolerance: 0.0001
+  checkpoint_sha256: null
+  # Evaluation-time routing intervention: learned (the trained router)
+  # | sticky (beta-EMA over the learned top-1 choice) | uniform (equal
+  # weight over ALL experts, the A5 uniform counterfactual) | oracle
+  # (M^T softmax(phase_head(z)) through the soft phase->expert mapping).
+  # Only PhaseBootstrappedMoE models honor it; other baselines always
+  # route learned. Evaluation-time only — training is unaffected.
+  router_mode: "learned"
+  # Per-phase success tracking. true -> the run FAILS if the training
+  # cache has no phase_thresholds.json (a cache that predates per-demo
+  # phase calibration); false -> per-phase SR is reported as null when the
+  # artifact is missing. Tracked whenever the artifact exists.
+  require_phase_tracking: false
+  # Per-step trace verbosity.
+  # `minimal` = today's behavior (episodes.jsonl + rollout_summary.json).
+  # `full` = 22-field per-step trace.jsonl written alongside episodes.jsonl;
+  # accepted here so configs can select it per run.
+  trace_level: "minimal"
+  trace_every_n_steps: 1
+
+gates:
+  # Gate 4 is the task-independent native-predicate probe: confirms that
+  # adapter.check_success() and the underlying env._check_success() are
+  # both callable and return bool/dict on the frozen bank. Hard FAIL on any
+  # exception or non-bool return — the learned-policy sweep would produce
+  # meaningless numbers without a working success predicate.
+  native_predicate_cases: 5
+  # Gate 5 sanity sweep (no-op + random), subsampled for speed.
+  random_sanity_episodes: 20
+  random_sanity_horizon: 200
+  random_sanity_success_max: 0.05
+  # Gate 2 demo replay (raw HDF5 required; skipped loudly when absent).
+  replay_demos: 1
+  replay_tolerance: 0.001
+  # Gate 6 checkpoint smoke episodes (skipped loudly when no checkpoint).
+  smoke_episodes: 10

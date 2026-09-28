@@ -1,0 +1,131 @@
+# config/train/stage1.yaml — Stage 1: Phase-supervised generalist pretraining
+
+stage: 1
+epochs: 100
+grad_clip_norm: 1.0
+lambda_phase: 1.0         # Weight on the auxiliary phase classification loss
+# Resolved label field for the Stage 1 auxiliary phase-classification loss
+# and phase diagnostics. Topology rows resolve to
+# "phase_topo"; the Static Rule comparison resolves to "phase".
+# Default "phase" preserves the historical bit-identical behavior; the final
+# manifest overrides this explicitly per method.
+phase_label_field: "phase"
+# Supervised contrastive regime alignment. Disabled by
+# default: `enabled=false` contributes exactly 0.0 with no extra metrics,
+# preserving the frozen protocol bit-for-bit. Enable with
+# `train.supcon.enabled=true` (optionally `label_field=phase_topo` once
+# topo discovery labels exist; `phase` is always present).
+supcon:
+  enabled: false
+  lambda_sc: 1.0
+  temperature: 0.07
+  label_field: "phase"
+# Per-step diagnostic: log cos(grad L_action, grad L_phase) as the
+# train/grad_cos_action_phase curve (auxiliary-task conflict detector,
+# Du et al. 2018 / PCGrad). Diagnostic only — never part of the loss, and
+# computed only when the model has a phase head and lambda_phase > 0.
+# Off by default; the frozen protocol does not enable it.
+grad_cosine: false
+# Effective λ(t) schedule for the auxiliary phase loss. "constant" = the
+# frozen protocol (λ = lambda_phase for every epoch, bit-identical to no
+# schedule). "linear" anneals the multiplier from start to end across the
+# run (0 <= end <= start <= 1): the phase head is shaped early and the
+# action loss dominates late. Chosen over gradient-conflict fixes
+# (PCGrad/CAGrad/Du-adaptive) because the diagnostic measured
+# cos(∇L_action, ∇L_phase) ≈ 0 — there is no conflict to resolve; the
+# val/loss_phase explosion is late-training overfitting on the flat
+# action-loss plateau.
+lambda_schedule:
+  type: "constant"        # constant | linear
+  start: 1.0              # multiplier at epoch 0 (linear only)
+  end: 0.0                # multiplier at the final epoch (linear only)
+# Phase-head class weighting for the CE loss. "none" = plain CE (protocol).
+# "balanced" = inverse-frequency weights computed from the TRAINING split.
+# "cui" = class-wise uniform increasing weights w_c = (1-β)/(1-β^{n_c}),
+# bounded by construction so a near-empty class cannot dominate the loss.
+# Counts/weights are written to metadata/phase_weights.json. Counteracts the
+# severe phase imbalance in Lift (phases 1/5 ≈ 1.2%/0.6% of steps) that lets
+# the head overfit majority phases (report §5.3, val/loss_phase 2.59 > ln6).
+phase_class_weight: "none"
+# CUI decay (phase_class_weight="cui" only): w_c = (1-β)/(1-β^{n_c}).
+cui_beta: 0.999
+# Label smoothing on the phase targets. 0.0 = plain CE (protocol,
+# bit-identical). > 0 mixes each sample's NLL with the uniform NLL, keeping
+# the phase logits soft for the downstream cells that route on them.
+soft_target_eps: 0.0
+# Computed automatically when phase_class_weight is "balanced"/"cui"
+# (training-split weights). Leave null otherwise.
+phase_weights: null
+# Inert mirrors of the Stage 2 IS blocks (margin/lipschitz/gain_reg live in
+# train/stage2.yaml). Present so manifest-level overrides compose for every
+# cell regardless of stage — Stage 1 training never reads them (Stage1Trainer
+# has its own _compute_loss), mirroring the stage2.yaml lambda_schedule
+# precedent in reverse.
+margin:
+  enabled: false
+  lambda_margin: 1.0
+  margin: 0.5
+  # Resolved label field for the Stage 2 margin loss. Inert in Stage 1
+  # (Stage1Trainer never reads it); present so manifest-level overrides
+  # compose for every cell regardless of stage. Topology rows use
+  # "phase_topo"; the Static Rule comparison uses "phase".
+  label_field: "phase"
+lipschitz:
+  enabled: false
+  lambda_lip: 0.1
+  rho: 0.8
+  num_pairs: 256
+  coord_slice: [0, 3]
+gain_reg:
+  enabled: false
+  lambda_gain: 1.0e-4
+  kappa_nominal: 1.0
+dim_weights: null
+release_loss:
+  enabled: false
+  lambda_rel: 0.1
+  gripper_threshold: 0.0
+  place_phase: 4
+log_dimension_mse: false
+log_every_n_steps: 50
+rich_progressbar: false
+# One compact progress line for epochs; the batch-level bar above remains
+# opt-in so cloud logs do not become noisy.
+epoch_progressbar: true
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 100              # Matches epochs
+  eta_min: 1.0e-6
+
+checkpoint:
+  every_n_epochs: 10
+  monitor: "val/loss_action"
+  mode: "min"             # Save when val loss decreases
+  save_top_k: 1
+  min_epoch: 0
+
+early_stopping:
+  enabled: false          # Locked protocol: full-length 100-epoch runs;
+                          # ad-hoc runs must opt IN via train.early_stopping.enabled=true
+  monitor: "val/loss_action"
+  mode: "min"
+  patience: 10
+  min_delta: 0.001
+
+
+# Path to the Stage 1 best checkpoint (Stage 2 only; null = auto-detect).
+stage1_ckpt_path: null
+freeze_encoder: false
+
+# Optional resume: path to a checkpoint saved by CheckpointCallback. Restores
+# model/optimizer/scheduler/RNG/callback state and continues from the recorded
+# epoch (null = fresh run).
+resume_from: null

@@ -1,0 +1,23 @@
+# Robot-only negative control for TwoArmTransport.
+defaults:
+  - transport
+  - _self_
+
+state_keys:
+  - key: "robot0_eef_pos"
+    dim: 3
+  - key: "robot0_eef_quat"
+    dim: 4
+  - key: "robot0_gripper_qpos"
+    dim: 2
+  - key: "robot1_eef_pos"
+    dim: 3
+  - key: "robot1_eef_quat"
+    dim: 4
+  - key: "robot1_gripper_qpos"
+    dim: 2
+state_dim: 18
+schema_version: "robomimic-transport-robot-only-v1"
+phase_labeler:
+  eef_pos_slice: [0, 3]
+  gripper_qpos_slice: [7, 9]

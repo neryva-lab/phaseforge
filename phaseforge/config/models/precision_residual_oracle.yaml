@@ -1,0 +1,62 @@
+# config/models/precision_residual_oracle.yaml — Final privileged offline diagnostic (MODEL-09).
+#
+# Routes by SUPPLIED recorded phase_topo labels at training and offline
+# evaluation under the final encoder/expert contract (normalized encoder,
+# beta-zero residual experts, 50% partial warm-start). NON-DEPLOYABLE by
+# construction: allow_rollout=false makes ordinary state-only rollout
+# refuse loudly. Report only offline diagnostics on held-out demonstration
+# data (action MSE, routing agreement, per-phase error) — never a rollout
+# success rate. Metadata marks the privilege.
+
+name: "precision_residual_oracle"
+_target_: phaseforge.models.baselines.precision_residual_oracle.PrecisionResidualOracleModel
+
+encoder:
+  _target_: phaseforge.models.components.encoder.StateEncoder
+  input_dim: ${data.state_dim}
+  hidden_dims: [256, 256, 256]
+  latent_dim: 128
+  activation: "gelu"
+  dropout: 0.1
+  use_residual: true
+  normalize_output: true
+
+action_head:
+  _target_: phaseforge.models.components.action_head.ActionHead
+  input_dim: 128
+  output_dim: ${data.action_dim}
+  head_type: "deterministic"
+  hidden_dim: 256
+
+router:
+  _target_: phaseforge.models.components.router.TopKRouter
+  latent_dim: 128
+  num_experts: 6
+  top_k: 1
+  noise_std: 0.0
+  balance_coeff: 0.01
+
+expert:
+  _target_: phaseforge.models.components.impedance_expert.ResidualImpedanceExpert
+  input_dim: 128
+  hidden_dims: [256]
+  output_dim: ${data.action_dim}
+  action_scale: [0.05, 0.05, 0.05, 0.5, 0.5, 0.5, 0.04]
+  kappa_min: 0.1
+  kappa_max: 5.0
+  beta: 0.0
+
+freeze_encoder: true
+encoder_lr_scale: 0.1
+
+num_phases: 6
+
+label_field: "phase_topo"
+
+allow_rollout: false
+
+expert_init:
+  type: "partial_warm"
+  drop_rate: 0.5
+  jitter_std: 0.0
+  seed: ${project.seed}

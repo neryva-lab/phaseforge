@@ -1,0 +1,1185 @@
+{
+  "name": "final_causal_matrix",
+  "task": "all",
+  "description": "Final same-generation baseline and ablation matrix for precision_residual_phaseforge (sole proposed method): the proposed rows preserve the locked confirmation contract (topo_pelt_k6 for prototype initialization, phase labels for Stage 1/SupCon/margin, beta-zero residual experts, margin lambda 0.05, and disabled Lipschitz/gain regularization); topology-supervised representation controls, router/expert initialization controls, two-factor corner, external imitation floor, router-package and integrated rule-label comparisons, plus privileged teacher-forced (separate diagnostic) and oracle (offline only) diagnostics. Topology-control rows use phase_topo labels; the static-rule row uses phase labels with its own Stage 1 provider. Retired pre-lock manifests are outside the active execution surface. Run with a fresh namespace, e.g. phaseforge-sweep --manifest experiments/final_causal_matrix.json --outputs outputs_final. No final training is authorized until the ledger validation gates pass.",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+  ],
+  "defaults": [
+    "train.early_stopping.enabled=false"
+  ],
+  "tasks": [
+    "Lift",
+    "Can",
+    "Square",
+    "ToolHang",
+    "Transport"
+  ],
+  "methods": [
+    {
+      "index": 1,
+      "name": "precision_residual_phaseforge",
+      "role": "sole proposed method",
+      "model": "precision_residual_phaseforge",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.lambda_margin=0.05",
+        "train.margin.label_field=phase",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 2,
+      "name": "bc",
+      "role": "external imitation floor",
+      "model": "final_aligned_bc",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        1
+      ],
+      "stage2_source": null,
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.lambda_phase=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase",
+        "train.phase_label_field=phase"
+      ]
+    },
+    {
+      "index": 3,
+      "name": "precision_residual_plain_encoder",
+      "role": "representation control",
+      "model": "precision_residual_plain_encoder",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 4,
+      "name": "precision_residual_phase_random_router",
+      "role": "router-initialization control",
+      "model": "precision_residual_phase_random_router",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 5,
+      "name": "precision_residual_scratch_moe",
+      "role": "expert-initialization control",
+      "model": "precision_residual_scratch_moe",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 6,
+      "name": "precision_residual_factorial_floor",
+      "role": "two-factor corner (representation + router init)",
+      "model": "precision_residual_factorial_floor",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 7,
+      "name": "final_aligned_softmax_top1",
+      "role": "router-package comparison (balance asymmetry registered)",
+      "model": "final_aligned_softmax_top1",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 8,
+      "name": "final_aligned_static_rule",
+      "role": "integrated rule-label comparison",
+      "model": "final_aligned_static_rule",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase"
+      ]
+    },
+    {
+      "index": 9,
+      "name": "precision_residual_teacher_forced",
+      "role": "privileged training diagnostic (separate table)",
+      "model": "precision_residual_teacher_forced",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 10,
+      "name": "precision_residual_oracle",
+      "role": "privileged offline diagnostic (offline only)",
+      "model": "precision_residual_oracle",
+      "data": "lift",
+      "task": "Lift",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "offline",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 11,
+      "name": "precision_residual_phaseforge",
+      "role": "sole proposed method",
+      "model": "precision_residual_phaseforge",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.lambda_margin=0.05",
+        "train.margin.label_field=phase",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 12,
+      "name": "bc",
+      "role": "external imitation floor",
+      "model": "final_aligned_bc",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        1
+      ],
+      "stage2_source": null,
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.lambda_phase=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase",
+        "train.phase_label_field=phase"
+      ]
+    },
+    {
+      "index": 13,
+      "name": "precision_residual_plain_encoder",
+      "role": "representation control",
+      "model": "precision_residual_plain_encoder",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 14,
+      "name": "precision_residual_phase_random_router",
+      "role": "router-initialization control",
+      "model": "precision_residual_phase_random_router",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 15,
+      "name": "precision_residual_scratch_moe",
+      "role": "expert-initialization control",
+      "model": "precision_residual_scratch_moe",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 16,
+      "name": "precision_residual_factorial_floor",
+      "role": "two-factor corner (representation + router init)",
+      "model": "precision_residual_factorial_floor",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 17,
+      "name": "final_aligned_softmax_top1",
+      "role": "router-package comparison (balance asymmetry registered)",
+      "model": "final_aligned_softmax_top1",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 18,
+      "name": "final_aligned_static_rule",
+      "role": "integrated rule-label comparison",
+      "model": "final_aligned_static_rule",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase"
+      ]
+    },
+    {
+      "index": 19,
+      "name": "precision_residual_teacher_forced",
+      "role": "privileged training diagnostic (separate table)",
+      "model": "precision_residual_teacher_forced",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 20,
+      "name": "precision_residual_oracle",
+      "role": "privileged offline diagnostic (offline only)",
+      "model": "precision_residual_oracle",
+      "data": "can",
+      "task": "Can",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "offline",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 21,
+      "name": "precision_residual_phaseforge",
+      "role": "sole proposed method",
+      "model": "precision_residual_phaseforge",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.lambda_margin=0.05",
+        "train.margin.label_field=phase",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 22,
+      "name": "bc",
+      "role": "external imitation floor",
+      "model": "final_aligned_bc",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        1
+      ],
+      "stage2_source": null,
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.lambda_phase=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase",
+        "train.phase_label_field=phase"
+      ]
+    },
+    {
+      "index": 23,
+      "name": "precision_residual_plain_encoder",
+      "role": "representation control",
+      "model": "precision_residual_plain_encoder",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 24,
+      "name": "precision_residual_phase_random_router",
+      "role": "router-initialization control",
+      "model": "precision_residual_phase_random_router",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 25,
+      "name": "precision_residual_scratch_moe",
+      "role": "expert-initialization control",
+      "model": "precision_residual_scratch_moe",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 26,
+      "name": "precision_residual_factorial_floor",
+      "role": "two-factor corner (representation + router init)",
+      "model": "precision_residual_factorial_floor",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 27,
+      "name": "final_aligned_softmax_top1",
+      "role": "router-package comparison (balance asymmetry registered)",
+      "model": "final_aligned_softmax_top1",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 28,
+      "name": "final_aligned_static_rule",
+      "role": "integrated rule-label comparison",
+      "model": "final_aligned_static_rule",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase"
+      ]
+    },
+    {
+      "index": 29,
+      "name": "precision_residual_teacher_forced",
+      "role": "privileged training diagnostic (separate table)",
+      "model": "precision_residual_teacher_forced",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 30,
+      "name": "precision_residual_oracle",
+      "role": "privileged offline diagnostic (offline only)",
+      "model": "precision_residual_oracle",
+      "data": "square",
+      "task": "Square",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "offline",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 31,
+      "name": "precision_residual_phaseforge",
+      "role": "sole proposed method",
+      "model": "precision_residual_phaseforge",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.lambda_margin=0.05",
+        "train.margin.label_field=phase",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 32,
+      "name": "bc",
+      "role": "external imitation floor",
+      "model": "final_aligned_bc",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        1
+      ],
+      "stage2_source": null,
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.lambda_phase=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase",
+        "train.phase_label_field=phase"
+      ]
+    },
+    {
+      "index": 33,
+      "name": "precision_residual_plain_encoder",
+      "role": "representation control",
+      "model": "precision_residual_plain_encoder",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 34,
+      "name": "precision_residual_phase_random_router",
+      "role": "router-initialization control",
+      "model": "precision_residual_phase_random_router",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 35,
+      "name": "precision_residual_scratch_moe",
+      "role": "expert-initialization control",
+      "model": "precision_residual_scratch_moe",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 36,
+      "name": "precision_residual_factorial_floor",
+      "role": "two-factor corner (representation + router init)",
+      "model": "precision_residual_factorial_floor",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 37,
+      "name": "final_aligned_softmax_top1",
+      "role": "router-package comparison (balance asymmetry registered)",
+      "model": "final_aligned_softmax_top1",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 38,
+      "name": "final_aligned_static_rule",
+      "role": "integrated rule-label comparison",
+      "model": "final_aligned_static_rule",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase"
+      ]
+    },
+    {
+      "index": 39,
+      "name": "precision_residual_teacher_forced",
+      "role": "privileged training diagnostic (separate table)",
+      "model": "precision_residual_teacher_forced",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 40,
+      "name": "precision_residual_oracle",
+      "role": "privileged offline diagnostic (offline only)",
+      "model": "precision_residual_oracle",
+      "data": "tool_hang",
+      "task": "ToolHang",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "offline",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 41,
+      "name": "precision_residual_phaseforge",
+      "role": "sole proposed method",
+      "model": "precision_residual_phaseforge",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.lambda_margin=0.05",
+        "train.margin.label_field=phase",
+        "train.lipschitz.enabled=false",
+        "train.gain_reg.enabled=false",
+        "eval.episodes.trace_level=full"
+      ]
+    },
+    {
+      "index": 42,
+      "name": "bc",
+      "role": "external imitation floor",
+      "model": "final_aligned_bc",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        1
+      ],
+      "stage2_source": null,
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.lambda_phase=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase",
+        "train.phase_label_field=phase"
+      ]
+    },
+    {
+      "index": 43,
+      "name": "precision_residual_plain_encoder",
+      "role": "representation control",
+      "model": "precision_residual_plain_encoder",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 44,
+      "name": "precision_residual_phase_random_router",
+      "role": "router-initialization control",
+      "model": "precision_residual_phase_random_router",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 45,
+      "name": "precision_residual_scratch_moe",
+      "role": "expert-initialization control",
+      "model": "precision_residual_scratch_moe",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 46,
+      "name": "precision_residual_factorial_floor",
+      "role": "two-factor corner (representation + router init)",
+      "model": "precision_residual_factorial_floor",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "final_aligned_bc_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 47,
+      "name": "final_aligned_softmax_top1",
+      "role": "router-package comparison (balance asymmetry registered)",
+      "model": "final_aligned_softmax_top1",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 48,
+      "name": "final_aligned_static_rule",
+      "role": "integrated rule-label comparison",
+      "model": "final_aligned_static_rule",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        1,
+        2
+      ],
+      "stage2_source": "self",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "train.phase_label_field=phase",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=true",
+        "train.supcon.label_field=phase",
+        "train.margin.enabled=true",
+        "train.margin.label_field=phase"
+      ]
+    },
+    {
+      "index": 49,
+      "name": "precision_residual_teacher_forced",
+      "role": "privileged training diagnostic (separate table)",
+      "model": "precision_residual_teacher_forced",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "rollout",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    },
+    {
+      "index": 50,
+      "name": "precision_residual_oracle",
+      "role": "privileged offline diagnostic (offline only)",
+      "model": "precision_residual_oracle",
+      "data": "transport",
+      "task": "Transport",
+      "stages": [
+        2
+      ],
+      "stage2_source": "precision_residual_phaseforge_stage1",
+      "evaluate": true,
+      "evaluate_mode": "offline",
+      "overrides": [
+        "topo@_global_=topo_pelt_k6",
+        "train.phase_label_field=phase_topo",
+        "models.expert.beta=0.0",
+        "train.supcon.enabled=false",
+        "train.supcon.label_field=phase_topo",
+        "train.margin.enabled=false",
+        "train.margin.label_field=phase_topo"
+      ]
+    }
+  ]
+}

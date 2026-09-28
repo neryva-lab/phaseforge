@@ -1,0 +1,43 @@
+# CI gate (professor review item 5): ruff's exit code IS the gate — a red
+# build is unmissable, independent of whatever a human happened to scroll to.
+# No GPU / simulation here: the real sim evaluation (robosuite per
+# docs/plan/final_evaluation_plan.md) needs the `rollout` extra plus a GPU
+# and runs manually.
+# The unit tests + runner dry-run smoke below cover the full aggregation
+# logic on CPU.
+#
+# NOTE: `uv sync --extra dev` installs the full runtime (torch, etc.) to run
+# the real test suite — heavy on first run (torch wheels), cached afterwards.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint (ruff, exit-code gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Sync dependencies
+        run: uv sync --extra dev
+      - name: ruff check (scripts/ is in the same gate as phaseforge/ and tests/)
+        run: uv run ruff check phaseforge tests scripts
+      - name: mypy (data/eval/train harness — professor item 7.2)
+        run: uv run mypy phaseforge/data/robomimic phaseforge/data/ingestion/cache_manager.py phaseforge/data/ingestion/state_machine.py phaseforge/evaluations/runners/offline_evaluator.py
+
+  test:
+    name: Tests (pytest, CPU-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Sync dependencies
+        run: uv sync --extra dev
+      - name: Run test suite
+        run: uv run pytest -q --tb=short

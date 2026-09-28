@@ -1,0 +1,39 @@
+# Robot-only negative-control condition for the robomimic/robosuite protocol.
+# This is intentionally not the primary structured-state observation.
+
+defaults:
+  - common
+  - _self_
+
+state_keys:
+  - key: "robot0_joint_pos"
+    dim: 7
+  - key: "robot0_joint_vel"
+    dim: 7
+  - key: "robot0_eef_pos"
+    dim: 3
+  - key: "robot0_eef_quat"
+    dim: 4
+  - key: "robot0_gripper_qpos"
+    dim: 2
+
+state_dim: 23
+schema_version: "robomimic-lift-robot-only-v1"
+
+phase_labeler:
+  _target_: phaseforge.data.robomimic.phase_labeler.RuleBasedPhaseLabeler
+  num_phases: 6
+  gripper_closed_threshold: 0.02
+  gripper_open_threshold: 0.04
+  eef_velocity_threshold: 0.01
+  min_phase_duration: 5
+  median_filter_size: 7
+  eef_pos_slice: [14, 17]
+  gripper_qpos_slice: [21, 23]
+
+ingester:
+  _target_: phaseforge.data.robomimic.ingester.RobomimicHDF5Ingester
+  state_keys: ${data.state_keys}
+  action_key: ${data.action_key}
+  action_dim: ${data.action_dim}
+  phase_labeler: ${data.phase_labeler}

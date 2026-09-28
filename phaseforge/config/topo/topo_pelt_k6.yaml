@@ -1,0 +1,25 @@
+# phaseforge/config/topo/topo_pelt_k6.yaml — Phase 2 primary topo discovery.
+# PELT segmentation on task-space variables with 6 regimes, matched to the
+# canonical 6-expert router. Fit train-only, decode validation with frozen
+# centroids. Mirrors config/dynamics/switching_linear_k6.yaml packaging:
+# select via `topo=topo_pelt_k6`, Hydra merges this into `cfg.data.topo`.
+# @package _global_
+data:
+  topo:
+    enabled: true
+    method: "pelt"
+    num_regimes: 6
+    penalty_beta: 10.0
+    min_segment_len: 5
+    cost: "l2"
+    clustering: "kmeans"
+    # Align discovery randomness with the protocol seed. A literal 42 here
+    # would make every runner seed reuse the same fitted regimes.
+    seed: ${project.seed}
+    train_label_field: "phase_topo"
+    # Mandatory observability audit. Thresholds are
+    # proposed defaults, not spec-fixed values. Fail-closed: the pipeline
+    # raises instead of training the router on unobservable labels.
+    enforce_observability: true
+    audit_min_macro_f1: 0.6
+    audit_min_occupancy: 0.01

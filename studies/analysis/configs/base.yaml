@@ -1,0 +1,21 @@
+# studies/analysis/configs/base.yaml — pipeline configuration.
+# Paths are repo-relative; resolved against the repository root at load time.
+
+namespaces:
+  final:
+    root: final_experiments_results/_staging_6seed_can_square
+    manifest: experiments/final_causal_matrix.json
+  ablation:
+    root: final_experiments_results/abalation_final/teamspace/studios/this_studio/PhaseForge/outputs_router_ablation_can_square
+    manifest: experiments/router_initialization_ablation_can_square.json
+
+output:
+  paper_root: studies/analysis/outputs      # figures/ and tables/ subdirectories are created inside
+  manifest_name: generation_manifest.json # written next to paper_root
+
+style:
+  palette: okabe_ito
+  accent: vermillion                      # PhaseForge series color
+  text_width_in: 5.5                      # NeurIPS text width
+  margin_width_in: 2.25
+  dpi: 300
